@@ -28,7 +28,7 @@ def traiterFichier(fichier, sep):
     fichierData = fichierData.dropna(subset=['ref OEM'])
     fichierData['ref OEM'] = fichierData['ref OEM'].astype(str)
     if sep != "" :
-        fichierData['ref OEM'] = fichierData['ref OEM'].str.split("|")
+        fichierData['ref OEM'] = fichierData['ref OEM'].str.split(sep)
         fichierData = fichierData.dropna(subset=['ref OEM'])
         fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
     fichierData['ref OEM'] = fichierData['ref OEM'].map(lambda x: x.strip())
