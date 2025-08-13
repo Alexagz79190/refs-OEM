@@ -19,9 +19,9 @@ def creerDataFrame(uploaded_file):
     df = df.dropna(subset=['Equivalences : références'])
     df['Equivalences : références'] = df['Equivalences : références'].astype(str)
     df['Equivalences : références'] = df['Equivalences : références'].str.split("|")
-    df = df.dropna(subset=['Equivalences : références'])
     df = df.explode('Equivalences : références').reset_index(drop=True)
     df['Equivalences : références'] = df['Equivalences : références'].map(lambda x: x.strip())
+    df = df.dropna(subset=['Equivalences : références'])
     df = df.drop_duplicates(subset=['Code produit', 'Equivalences : références'])
     df.insert(5,"ref OEM alphanum",df['Equivalences : références'].map(removeNonAlnum))
     return df
@@ -55,4 +55,5 @@ if uploaded_file is not None:
 if st.session_state["df"] is not None:
     st.info("Données initialisées pour la session, vous pouvez utiliser les autres pages !")
 else :
+
     st.warning("Les autres pages ne fonctionneront pas correctement tant que les données n'auront pas été initialisées !")
