@@ -28,8 +28,9 @@ def traiterFichier(fichier, sep):
     fichierData = fichierData.dropna(subset=['ref OEM'])
     fichierData['ref OEM'] = fichierData['ref OEM'].astype(str)
     if sep != "" :
-        fichierData['ref OEM'] = fichierData['ref OEM'].str.split(sep)
-        fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
+        for char in sep :
+            fichierData['ref OEM'] = fichierData['ref OEM'].str.split(char)
+            fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
     fichierData['ref OEM'] = fichierData['ref OEM'].map(lambda x: x.strip())
     fichierData = fichierData.dropna(subset=['ref OEM'])
     fichierData = fichierData.drop_duplicates(subset=['ref produit', 'ref OEM'])
@@ -86,4 +87,5 @@ if uploaded_file is not None:
     csv = traiterFichier(uploaded_file, separateur)
     st.download_button(label="Télécharger le résultat", data = csv, file_name = "refs_constructeurs_résultat.csv", mime = "test/csv")
     
+
 
