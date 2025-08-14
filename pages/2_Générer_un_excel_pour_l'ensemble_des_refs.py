@@ -32,12 +32,15 @@ def traiterFichier(fichier, sep):
             fichierData['ref OEM'] = fichierData['ref OEM'].str.split(char)
             fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
     fichierData['ref OEM'] = fichierData['ref OEM'].map(lambda x: x.strip())
+    fichierData['ref OEM'] = fichierData['ref OEM'].replace('', np.nan)
     fichierData = fichierData.dropna(subset=['ref OEM'])
     fichierData = fichierData.drop_duplicates(subset=['ref produit', 'ref OEM'])
     if matching :
         mergedData = fichierData.merge(dataGlobal, left_on='ref OEM', right_on='Equivalences : références', how="left")
     else :
         fichierData.insert(3,"ref OEM alphanum",fichierData['ref OEM'].map(removeNonAlnum))
+        fichierData['ref OEM alphanum'] = fichierData['ref OEM alphanum'].replace('', np.nan)
+        fichierData = fichierData.dropna(subset=['ref OEM alphanum'])
         mergedData = fichierData.merge(dataGlobal, on='ref OEM alphanum', how="left")
     mergedData = mergedData.fillna(value = fillValues)
     mergedDataInter = mergedData.copy()
@@ -87,5 +90,6 @@ if uploaded_file is not None:
     csv = traiterFichier(uploaded_file, separateur)
     st.download_button(label="Télécharger le résultat", data = csv, file_name = "refs_constructeurs_résultat.csv", mime = "test/csv")
     
+
 
 
