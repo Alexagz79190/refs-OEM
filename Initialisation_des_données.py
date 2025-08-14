@@ -8,6 +8,7 @@ Created on Mon Jun  2 14:01:49 2025
 import streamlit as st
 import pandas as pd
 import re
+import numpy as np
 
 nonAlnumRegex = re.compile(r'[^a-zA-Z0-9]+')
 
@@ -21,10 +22,12 @@ def creerDataFrame(uploaded_file):
     df['Equivalences : références'] = df['Equivalences : références'].str.split("|")
     df = df.explode('Equivalences : références').reset_index(drop=True)
     df['Equivalences : références'] = df['Equivalences : références'].map(lambda x: x.strip())
+    df['Equivalences : références'] = df['Equivalences : références'].replace('', np.nan)
     df = df.dropna(subset=['Equivalences : références'])
     df = df.drop_duplicates(subset=['Code produit', 'Equivalences : références'])
     df.insert(5,"ref OEM alphanum",df['Equivalences : références'].map(removeNonAlnum))
     return df
+
 
 
 if "df" not in st.session_state:
@@ -57,3 +60,4 @@ if st.session_state["df"] is not None:
 else :
 
     st.warning("Les autres pages ne fonctionneront pas correctement tant que les données n'auront pas été initialisées !")
+
