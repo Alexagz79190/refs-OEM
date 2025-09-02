@@ -9,9 +9,10 @@ import streamlit as st
 import pandas as pd
 import re
 import numpy as np
+import io
 
 nonAlnumRegex = re.compile(r'[^a-zA-Z0-9]+')
-fillValues = {"Code produit" : "", "Libellé produit" : "", "Fournisseur : libellé" : "", "Equivalences : références" : "", "Prix d'achat en cours" : 99999}
+fillValues = {"Code produit" : "", "Libellé produit" : "", "Fournisseur : libellé" : "", "Equivalences : références" : "", "Prix d'achat en cours" : 99999, "Stocks : stock Agrizone" : "", "Stocks : quantités" : ""}
 colonnesObligatoires = list(fillValues.keys())
 
 def traitementDesMerges(listeTexte):
@@ -24,13 +25,18 @@ def removeNonAlnum(texte):
     return nonAlnumRegex.sub('',str(texte))
 
 def traiterFichier(fichier, sep):
-    fichierData = pd.read_excel(uploaded_file)
+    #changement à test
+    fichierData = pd.read_excel(fichier)
     fichierData = fichierData.dropna(subset=['ref OEM'])
     fichierData['ref OEM'] = fichierData['ref OEM'].astype(str)
     if sep != "" :
-        for char in sep :
-            fichierData['ref OEM'] = fichierData['ref OEM'].str.split(char)
+        if oneSep :
+            fichierData['ref OEM'] = fichierData['ref OEM'].str.split(sep)
             fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
+        else :
+            for char in sep :
+                fichierData['ref OEM'] = fichierData['ref OEM'].str.split(char)
+                fichierData = fichierData.explode('ref OEM').reset_index(drop=True)
     fichierData['ref OEM'] = fichierData['ref OEM'].map(lambda x: x.strip())
     fichierData['ref OEM'] = fichierData['ref OEM'].replace('', np.nan)
     fichierData = fichierData.dropna(subset=['ref OEM'])
@@ -45,26 +51,26 @@ def traiterFichier(fichier, sep):
     mergedData = mergedData.fillna(value = fillValues)
     mergedDataInter = mergedData.copy()
     mergedDataInter["idxmin prix achat"] = mergedDataInter["Prix d'achat en cours"]
-    mergedDataInter = mergedDataInter.groupby(["ref produit", "ref OEM", "Nouveau prix d'achat"]).agg({
+    mergedDataInter = mergedDataInter.groupby(["ref produit", "libellé", "ref OEM", "Nouveau prix d'achat"]).agg({
         "Code produit": lambda x: "|||".join(x),"Libellé produit": lambda x: "|||".join(x), "Fournisseur : libellé": 
             lambda x: "|||".join(x), "Equivalences : références": lambda x: "|||".join(x), "Prix d'achat en cours": 
-                'min', 'idxmin prix achat': 'idxmin'}).rename({"Prix d'achat en cours":"Minimum prix d'achat dans le BO"}, axis=1).reset_index()
+                'min', "Stocks : stock Agrizone": lambda x: sum(x)>0, 'idxmin prix achat': 'idxmin'}).rename({"Prix d'achat en cours":"Minimum prix d'achat dans le BO"}, axis=1).reset_index()
     resultData = mergedDataInter.copy()
     resultData["idxmin inter prix achat"] = resultData["Minimum prix d'achat dans le BO"]
-    resultData = resultData.groupby(["ref produit", "Nouveau prix d'achat"]).agg({
+    resultData = resultData.groupby(["ref produit", "libellé", "Nouveau prix d'achat"]).agg({
         "ref OEM" : lambda x: "|".join(x), "Code produit": traitementDesMerges,"Libellé produit": traitementDesMerges, "Fournisseur : libellé": 
             traitementDesMerges, "Equivalences : références": traitementDesMerges, "Minimum prix d'achat dans le BO": 
-                'min', "idxmin inter prix achat": 'idxmin'}).reset_index()
-    resultData.insert(9, "fourn le moins cher", resultData["idxmin inter prix achat"].map(lambda x: mergedData.at[mergedDataInter.at[x, 'idxmin prix achat'],"Fournisseur : libellé"]))
-    resultData.insert(10, "Comparaison prix achat", "")
+                'min', "Stocks : stock Agrizone": lambda x: sum(x)>0, "idxmin inter prix achat": 'idxmin'}).reset_index()
+    resultData.insert(10, "fourn le moins cher", resultData["idxmin inter prix achat"].map(lambda x: mergedData.at[mergedDataInter.at[x, 'idxmin prix achat'],"Fournisseur : libellé"]))
+    resultData.insert(11, "Comparaison prix achat", "")
     resultData["Comparaison prix achat"] = np.where(resultData["Nouveau prix d'achat"] < resultData["Minimum prix d'achat dans le BO"], "Nouveau prix d'achat plus bas !", np.where(resultData["Nouveau prix d'achat"] == resultData["Minimum prix d'achat dans le BO"], "Nouveau prix d'achat égal", "Nouveau prix d'achat plus élevé"))
-    compteur = 10
+    compteur = 11
     for column in dataGlobal :
         if column not in colonnesObligatoires and column != "ref OEM alphanum" :
             compteur += 1
             resultData.insert(compteur, column, resultData["idxmin inter prix achat"].map(lambda x: mergedData.at[mergedDataInter.at[x, 'idxmin prix achat'],column]))
     resultData = resultData.drop("idxmin inter prix achat", axis=1)
-    return resultData.to_csv().encode("utf-8")
+    return [resultData, mergedData]
         
     
 st.title("Comparer des références en masse")
@@ -78,6 +84,11 @@ dataGlobal = st.session_state["df"]
 
 matching = st.checkbox('''Matching exact  
                        Le matching non exact match les OEM en conservant uniquement les lettres et les chiffres.''')
+                       
+oneSep = st.checkbox('''Séparateur de plusieurs caractères.
+                     Par défaut le programme sépare les refs OEM du fichier avec chaque caractère entré dans le champ ci-dessous.
+                     Par exemple si vous entrez -, le programme sépare avec les tirets et avec les virgules. 
+                     Si cette case est cochée le programme ne séparera qu'avec la combinaison -, et non des virgules ou tirets isolés.''')
 
 separateur = st.text_input("Séparateur entre 2 refs OEM dans le fichier envoyé (laisser vide si il n'y a qu'une seule ref OEM par ligne)")
 
@@ -87,9 +98,12 @@ with open("modèle import refs constructeur.xlsx", "rb") as file :
 uploaded_file = st.file_uploader("Importer l'export au format excel", type="xlsx")
 
 if uploaded_file is not None:
-    csv = traiterFichier(uploaded_file, separateur)
-    st.download_button(label="Télécharger le résultat", data = csv, file_name = "refs_constructeurs_résultat.csv", mime = "test/csv")
+    buffer = io.BytesIO()
+    [dfMerged, dfNotMerged] = traiterFichier(uploaded_file, separateur)
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer :
+        dfMerged.to_excel(writer, sheet_name='Résultat global')
+        dfNotMerged.to_excel(writer, sheet_name='Résultat détaillé')
+        
+        writer.close()
+        download = st.download_button(label="Télécharger le résultat", data = buffer.getvalue(), file_name = "refs_constructeurs_résultat.xlsx", mime="application/vnd.ms-excel")
     
-
-
-
