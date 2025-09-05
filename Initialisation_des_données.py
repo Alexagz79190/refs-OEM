@@ -13,7 +13,7 @@ import numpy as np
 nonAlnumRegex = re.compile(r'[^a-zA-Z0-9]+')
 
 def removeNonAlnum(texte):
-    return nonAlnumRegex.sub('',str(texte))
+    return nonAlnumRegex.sub('',str(texte)).lower()
 
 def creerDataFrame(uploaded_file):
     df = pd.read_excel(uploaded_file)
@@ -62,3 +62,4 @@ if st.session_state["df"] is not None:
     st.info("Données initialisées pour la session, vous pouvez utiliser les autres pages !")
 else :
     st.warning("Les autres pages ne fonctionneront pas correctement tant que les données n'auront pas été initialisées !")
+
