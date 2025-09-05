@@ -54,17 +54,17 @@ def traiterFichier(fichier, sep):
     mergedDataInter = mergedDataInter.groupby(["ref produit", "libellé", "ref OEM", "Nouveau prix d'achat"]).agg({
         "Code produit": lambda x: "|||".join(x),"Libellé produit": lambda x: "|||".join(x), "Fournisseur : libellé": 
             lambda x: "|||".join(x), "Equivalences : références": lambda x: "|||".join(x), "Prix d'achat en cours": 
-                'min', "Stocks : stock Agrizone": lambda x: sum(x)>0, 'idxmin prix achat': 'idxmin'}).rename({"Prix d'achat en cours":"Minimum prix d'achat dans le BO"}, axis=1).reset_index()
+                'min', 'idxmin prix achat': 'idxmin'}).rename({"Prix d'achat en cours":"Minimum prix d'achat dans le BO"}, axis=1).reset_index()
     resultData = mergedDataInter.copy()
     resultData["idxmin inter prix achat"] = resultData["Minimum prix d'achat dans le BO"]
     resultData = resultData.groupby(["ref produit", "libellé", "Nouveau prix d'achat"]).agg({
         "ref OEM" : lambda x: "|".join(x), "Code produit": traitementDesMerges,"Libellé produit": traitementDesMerges, "Fournisseur : libellé": 
             traitementDesMerges, "Equivalences : références": traitementDesMerges, "Minimum prix d'achat dans le BO": 
-                'min', "Stocks : stock Agrizone": lambda x: sum(x)>0, "idxmin inter prix achat": 'idxmin'}).reset_index()
-    resultData.insert(10, "fourn le moins cher", resultData["idxmin inter prix achat"].map(lambda x: mergedData.at[mergedDataInter.at[x, 'idxmin prix achat'],"Fournisseur : libellé"]))
-    resultData.insert(11, "Comparaison prix achat", "")
+                'min', "idxmin inter prix achat": 'idxmin'}).reset_index()
+    resultData.insert(9, "fourn le moins cher", resultData["idxmin inter prix achat"].map(lambda x: mergedData.at[mergedDataInter.at[x, 'idxmin prix achat'],"Fournisseur : libellé"]))
+    resultData.insert(10, "Comparaison prix achat", "")
     resultData["Comparaison prix achat"] = np.where(resultData["Nouveau prix d'achat"] < resultData["Minimum prix d'achat dans le BO"], "Nouveau prix d'achat plus bas !", np.where(resultData["Nouveau prix d'achat"] == resultData["Minimum prix d'achat dans le BO"], "Nouveau prix d'achat égal", "Nouveau prix d'achat plus élevé"))
-    compteur = 11
+    compteur = 10
     for column in dataGlobal :
         if column not in colonnesObligatoires and column != "ref OEM alphanum" :
             compteur += 1
@@ -107,4 +107,5 @@ if uploaded_file is not None:
         writer.close()
         download = st.download_button(label="Télécharger le résultat", data = buffer.getvalue(), file_name = "refs_constructeurs_résultat.xlsx", mime="application/vnd.ms-excel")
     
+
 
