@@ -22,7 +22,7 @@ def traitementDesMerges(listeTexte):
     return "||".join(filter(None,listeTexteSansDoublons))
 
 def removeNonAlnum(texte):
-    return nonAlnumRegex.sub('',str(texte))
+    return nonAlnumRegex.sub('',str(texte)).lower()
 
 def traiterFichier(fichier, sep):
     #changement à test
@@ -107,3 +107,4 @@ if uploaded_file is not None:
         writer.close()
         download = st.download_button(label="Télécharger le résultat", data = buffer.getvalue(), file_name = "refs_constructeurs_résultat.xlsx", mime="application/vnd.ms-excel")
     
+
